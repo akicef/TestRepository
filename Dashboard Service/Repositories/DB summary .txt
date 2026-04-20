@@ -1,0 +1,166 @@
+crmhrm=#   \d absence_requests
+                                              Table "public.absence_requests"
+       Column       |              Type              | Collation | Nullable |                   Default                    
+--------------------+--------------------------------+-----------+----------+----------------------------------------------
+ id                 | bigint                         |           | not null | nextval('absence_requests_id_seq'::regclass)
+ approver_id        | bigint                         |           |          | 
+ attachment_id      | bigint                         |           |          | 
+ date_from          | date                           |           | not null | 
+ date_to            | date                           |           | not null | 
+ decision_timestamp | timestamp(6) without time zone |           |          | 
+ employee_id        | bigint                         |           | not null | 
+ optional_note      | character varying(255)         |           |          | 
+ status             | character varying(255)         |           | not null | 
+ type               | character varying(255)         |           | not null | 
+Indexes:
+    "absence_requests_pkey" PRIMARY KEY, btree (id)
+Check constraints:
+    "absence_requests_status_check" CHECK (status::text = ANY (ARRAY['DRAFT'::character varying, 'SUBMITTED'::character varying, 'APPROVED'::character varying, 'REJECTED'::character varying]::text[]))
+    "absence_requests_type_check" CHECK (type::text = ANY (ARRAY['VACATION'::character varying, 'WFH'::character varying, 'SICK_LEAVE'::character varying, 'BUSINESS_TRIP'::character varying]::text[]))
+
+crmhrm=#   \d parties
+                                       Table "public.parties"
+    Column    |          Type          | Collation | Nullable |               Default               
+--------------+------------------------+-----------+----------+-------------------------------------
+ id           | bigint                 |           | not null | nextval('parties_id_seq'::regclass)
+ is_customer  | boolean                |           |          | 
+ is_supplier  | boolean                |           |          | 
+ name         | character varying(255) |           | not null | 
+ tax_id_type  | character varying(255) |           |          | 
+ tax_id_value | character varying(255) |           |          | 
+ party_type   | character varying(255) |           | not null | 
+Indexes:
+    "parties_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "contracts" CONSTRAINT "fkeo9bresgt2g3sftybjghc2a07" FOREIGN KEY (party_id) REFERENCES parties(id)
+    TABLE "invoices" CONSTRAINT "fkmvvlgn8sao0s6jkp2y8ctoobh" FOREIGN KEY (party_id) REFERENCES parties(id)
+
+crmhrm=#   \d audit_event
+                              Table "public.audit_event"
+        Column         |            Type             | Collation | Nullable | Default 
+-----------------------+-----------------------------+-----------+----------+---------
+ audit_id              | uuid                        |           | not null | 
+ action_name           | character varying(255)      |           |          | 
+ severity              | character varying(255)      |           |          | 
+ actor_id              | uuid                        |           | not null | 
+ payload_field_name    | character varying(255)      |           |          | 
+ payload_metadata_json | text                        |           |          | 
+ payload_new_value     | text                        |           |          | 
+ payload_old_value     | text                        |           |          | 
+ target_resource_id    | character varying(255)      |           | not null | 
+ timestamp             | timestamp(6) with time zone |           | not null | 
+Indexes:
+    "audit_event_pkey" PRIMARY KEY, btree (audit_id)
+Check constraints:
+    "audit_event_severity_check" CHECK (severity::text = ANY (ARRAY['LOW'::character varying, 'MEDIUM'::character varying, 'HIGH'::character varying]::text[]))
+
+crmhrm=#   \d invoices
+                                        Table "public.invoices"
+     Column     |          Type          | Collation | Nullable |               Default                
+----------------+------------------------+-----------+----------+--------------------------------------
+ id             | bigint                 |           | not null | nextval('invoices_id_seq'::regclass)
+ amount         | numeric(19,4)          |           |          | 
+ currency       | character varying(3)   |           |          | 
+ attachment_id  | bigint                 |           |          | 
+ due_date       | date                   |           |          | 
+ invoice_number | character varying(255) |           | not null | 
+ status         | character varying(255) |           |          | 
+ contract_id    | bigint                 |           |          | 
+ party_id       | bigint                 |           | not null | 
+Indexes:
+    "invoices_pkey" PRIMARY KEY, btree (id)
+    "uk_l1x55mfsay7co0r3m9ynvipd5" UNIQUE CONSTRAINT, btree (invoice_number)
+Foreign-key constraints:
+    "fkeads7q9fktwtsgdwmp1x16eqc" FOREIGN KEY (contract_id) REFERENCES contracts(id)
+    "fkmvvlgn8sao0s6jkp2y8ctoobh" FOREIGN KEY (party_id) REFERENCES parties(id)
+Referenced by:
+    TABLE "complaints" CONSTRAINT "fkc7c1iglgpbvlmdpd46t772crh" FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+
+crmhrm=#   \d employees
+                                      Table "public.employees"
+   Column    |          Type          | Collation | Nullable |                Default                
+-------------+------------------------+-----------+----------+---------------------------------------
+ id          | bigint                 |           | not null | nextval('employees_id_seq'::regclass)
+ email       | character varying(255) |           |          | 
+ phone       | character varying(255) |           |          | 
+ first_name  | character varying(255) |           | not null | 
+ hire_date   | date                   |           | not null | 
+ last_name   | character varying(255) |           | not null | 
+ position_id | bigint                 |           |          | 
+ user_id     | bigint                 |           | not null | 
+Indexes:
+    "employees_pkey" PRIMARY KEY, btree (id)
+    "uk_j2dmgsma6pont6kf7nic9elpd" UNIQUE CONSTRAINT, btree (user_id)
+
+crmhrm=#   \d file_metadata
+                          Table "public.file_metadata"
+    Column    |              Type              | Collation | Nullable | Default 
+--------------+--------------------------------+-----------+----------+---------
+ id           | uuid                           |           | not null | 
+ content_type | character varying(255)         |           | not null | 
+ file_name    | character varying(255)         |           | not null | 
+ purpose      | character varying(255)         |           | not null | 
+ reference_id | character varying(255)         |           | not null | 
+ storage_path | character varying(255)         |           | not null | 
+ uploaded_at  | timestamp(6) without time zone |           | not null | 
+Indexes:
+    "file_metadata_pkey" PRIMARY KEY, btree (id)
+
+crmhrm=#   \d contracts
+                                            Table "public.contracts"
+         Column          |          Type          | Collation | Nullable |                Default                
+-------------------------+------------------------+-----------+----------+---------------------------------------
+ id                      | bigint                 |           | not null | nextval('contracts_id_seq'::regclass)
+ attachment_id           | bigint                 |           |          | 
+ end_date                | date                   |           |          | 
+ contract_number         | character varying(255) |           | not null | 
+ responsible_employee_id | bigint                 |           |          | 
+ start_date              | date                   |           |          | 
+ status                  | character varying(255) |           |          | 
+ party_id                | bigint                 |           | not null | 
+Indexes:
+    "contracts_pkey" PRIMARY KEY, btree (id)
+    "uk_bx9jyu2cccdntb3ehrf0ojpfd" UNIQUE CONSTRAINT, btree (contract_number)
+Foreign-key constraints:
+    "fkeo9bresgt2g3sftybjghc2a07" FOREIGN KEY (party_id) REFERENCES parties(id)
+Referenced by:
+    TABLE "complaints" CONSTRAINT "fkb2bya5mcx2hhmxcyugv5oi8kv" FOREIGN KEY (contract_id) REFERENCES contracts(id)
+    TABLE "invoices" CONSTRAINT "fkeads7q9fktwtsgdwmp1x16eqc" FOREIGN KEY (contract_id) REFERENCES contracts(id)
+
+crmhrm=#   \d positions
+                                           Table "public.positions"
+        Column        |          Type          | Collation | Nullable |                Default                
+----------------------+------------------------+-----------+----------+---------------------------------------
+ id                   | bigint                 |           | not null | nextval('positions_id_seq'::regclass)
+ department           | character varying(255) |           | not null | 
+ superior_position_id | bigint                 |           |          | 
+ title                | character varying(255) |           | not null | 
+Indexes:
+    "positions_pkey" PRIMARY KEY, btree (id)
+
+crmhrm=#   \d salary_records
+                                      Table "public.salary_records"
+   Column    |          Type          | Collation | Nullable |                  Default                   
+-------------+------------------------+-----------+----------+--------------------------------------------
+ id          | bigint                 |           | not null | nextval('salary_records_id_seq'::regclass)
+ employee_id | bigint                 |           | not null | 
+ base_salary | numeric(38,2)          |           |          | 
+ bonus       | numeric(38,2)          |           |          | 
+ currency    | character varying(255) |           |          | 
+ valid_from  | date                   |           | not null | 
+ valid_to    | date                   |           |          | 
+Indexes:
+    "salary_records_pkey" PRIMARY KEY, btree (id)
+
+crmhrm=#   \d users
+                                       Table "public.users"
+    Column     |          Type          | Collation | Nullable |              Default              
+---------------+------------------------+-----------+----------+-----------------------------------
+ id            | bigint                 |           | not null | nextval('users_id_seq'::regclass)
+ active        | boolean                |           | not null | 
+ password_hash | character varying(255) |           | not null | 
+ role          | character varying(255) |           | not null | 
+ username      | character varying(255) |           | not null | 
+Indexes:
+    "users_pkey" PRIMARY KEY, btree (id)
+    "uk_r43af9ap4edm43mmtq01oddj6" UNIQUE CONSTRAINT, btree (username)

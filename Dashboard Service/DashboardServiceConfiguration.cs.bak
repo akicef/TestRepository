@@ -1,0 +1,44 @@
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+
+builder.Services.AddControllers();
+// register dashboard service
+// configuration for postgres connection (set in appsettings)
+var conn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=dashboard;Username=postgres;Password=postgres";
+
+builder.Services.AddSingleton<Dashboard_Service.Repositories.IDashboardSummaryRepository>(sp => new Dashboard_Service.Repositories.DashboardSummaryRepository(conn));
+builder.Services.AddSingleton<Dashboard_Service.Services.IDashboardSummaryService, Dashboard_Service.Services.DashboardSummaryService>();
+// register current user provider (placeholder)
+builder.Services.AddSingleton<Dashboard_Service.Security.ICurrentUserProvider, Dashboard_Service.Security.CurrentUserProvider>();
+
+// Make Swagger optional so it can be removed and added back via configuration.
+// Set "Swagger:Enabled" to false in appsettings.json to remove Swagger from the API.
+var enableSwagger = builder.Configuration.GetValue<bool>("Swagger:Enabled", true);
+if (enableSwagger)
+{
+    // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Dashboard Service API", Version = "v1" });
+    });
+}
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (enableSwagger)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Dashboard Service API v1");
+    });
+}
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
